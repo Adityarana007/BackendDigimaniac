@@ -43,6 +43,13 @@ src/
 ### Profile Management
 - `PUT /api/profile/edit` - Edit user profile (authenticated)
 
+### Time Tracking
+- `POST /api/time/clock-in` - Clock in (authenticated)
+- `POST /api/time/clock-out` - Clock out (authenticated)
+- `GET /api/time/status` - Get current clock status (authenticated)
+- `GET /api/time/entries` - Get time entries with pagination (authenticated)
+- `GET /api/time/today` - Get today's time summary (authenticated)
+
 ## Setup Instructions
 
 1. Install dependencies:

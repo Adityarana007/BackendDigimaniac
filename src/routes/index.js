@@ -2,6 +2,7 @@ const authRoute = require("./auth");
 const profileRoute = require("./profile");
 const userRoute = require("./user");
 const accountRoute = require("./account");
+const timeTrackingRoute = require("./timeTracking");
 
 // Configure all routes
 const configureRoutes = (app) => {
@@ -16,6 +17,9 @@ const configureRoutes = (app) => {
   
   // Account routes (registration, email verification, password update)
   app.use("/api", accountRoute);
+  
+  // Time tracking routes
+  app.use("/api/time", timeTrackingRoute);
 };
 
 module.exports = configureRoutes;
