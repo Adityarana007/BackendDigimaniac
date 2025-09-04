@@ -135,7 +135,7 @@ router.post('/clock-out', auth, async (req, res) => {
   }
 });
 
-// Get current status (clocked in or not)
+// Get current status and total logged time for today
 router.get('/status', auth, async (req, res) => {
   try {
     const userId = req.user.userId;
@@ -150,19 +150,60 @@ router.get('/status', auth, async (req, res) => {
       });
     }
 
-    // Get active time entry
-    const activeEntry = await TimeEntry.getActiveEntry(userId);
+    // Get today's date range (UTC)
+    const today = new Date();
+    const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59, 999);
+
+    // Get today's entries
+    const todayEntries = await TimeEntry.getUserEntries(userId, startOfDay, endOfDay);
+
+    // Calculate total logged time for today
+    const totalLoggedHours = todayEntries
+      .filter(entry => entry.clockOut) // Only completed sessions
+      .reduce((sum, entry) => sum + (entry.totalHours || 0), 0);
+
+    // Get active time entry (current session)
+    const activeEntry = todayEntries.find(entry => entry.status === 'active');
+
+    // Calculate current session time if active
+    let currentSessionHours = 0;
+    if (activeEntry) {
+      const currentTime = new Date();
+      const sessionDurationMs = currentTime - activeEntry.clockIn;
+      currentSessionHours = Math.round((sessionDurationMs / (1000 * 60 * 60)) * 100) / 100; // Round to 2 decimal places
+    }
+
+    // Total time including current session
+    const totalTimeToday = totalLoggedHours + currentSessionHours;
 
     return res.status(200).json({
       statusCode: 200,
       success: true,
       isClockedIn: !!activeEntry,
+      todaySummary: {
+        date: startOfDay,
+        totalLoggedHours: Math.round(totalLoggedHours * 100) / 100,
+        currentSessionHours: Math.round(currentSessionHours * 100) / 100,
+        totalTimeToday: Math.round(totalTimeToday * 100) / 100,
+        totalSessions: todayEntries.length,
+        completedSessions: todayEntries.filter(entry => entry.clockOut).length
+      },
       currentSession: activeEntry ? {
         id: activeEntry._id,
         clockIn: activeEntry.clockIn,
         notes: activeEntry.notes,
-        location: activeEntry.location
-      } : null
+        location: activeEntry.location,
+        currentDuration: currentSessionHours
+      } : null,
+      todayEntries: todayEntries.map(entry => ({
+        id: entry._id,
+        clockIn: entry.clockIn,
+        clockOut: entry.clockOut,
+        totalHours: entry.totalHours,
+        status: entry.status,
+        notes: entry.notes
+      }))
     });
 
   } catch (error) {
